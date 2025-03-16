@@ -1,0 +1,16 @@
+<idea-plugin>
+    <id>dev.gorokhov.smoothcaret</id>
+    <name>Smoothcaret</name>
+    <vendor email="support@yourcompany.com" url="https://www.yourcompany.com">YourCompany</vendor>
+
+    <description><![CDATA[
+    Smooth caret animation plugin for JetBrains IDEs.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="dev.gorokhov.smoothcaret.SmoothCaretService"/>
+        <editorFactoryListener implementation="dev.gorokhov.smoothcaret.SmoothCaretEditorFactoryListener"/>
+    </extensions>
+</idea-plugin>
