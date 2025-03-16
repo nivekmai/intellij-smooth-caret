@@ -5,6 +5,8 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.event.EditorFactoryEvent
 import com.intellij.openapi.editor.event.EditorFactoryListener
+import com.intellij.openapi.editor.event.CaretListener
+import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import java.awt.Color
@@ -40,11 +42,24 @@ class SmoothCaretEditorFactoryListener : EditorFactoryListener {
             HighlighterTargetArea.EXACT_RANGE
         )
 
-        highlighter.customRenderer = SmoothCaretRenderer(settings)
+        val renderer = SmoothCaretRenderer(settings)
+        highlighter.customRenderer = renderer
+
+        val caretListener = object : CaretListener {
+            override fun caretPositionChanged(event: CaretEvent) {
+                editor.contentComponent.repaint()
+            }
+        }
+
+        editor.caretModel.addCaretListener(caretListener)
+        editor.putUserData(CARET_LISTENER_KEY, caretListener)
     }
 
     override fun editorReleased(event: EditorFactoryEvent) {
         // Restore default caret color when editor is released
         event.editor.colorsScheme.setColor(EditorColors.CARET_COLOR, null)
     }
+
 }
+
+private val CARET_LISTENER_KEY = com.intellij.openapi.util.Key<CaretListener>("SMOOTH_CARET_LISTENER")
