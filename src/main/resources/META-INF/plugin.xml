@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>dev.gorokhov.smoothcaret</id>
     <name>Smoothcaret</name>
-    <vendor email="support@yourcompany.com" url="https://www.yourcompany.com">YourCompany</vendor>
+    <vendor email="vlad@gorokhov.dev" url="https://gorokhov.dev">Vlad</vendor>
 
     <description><![CDATA[
     Smooth caret animation plugin for JetBrains IDEs.

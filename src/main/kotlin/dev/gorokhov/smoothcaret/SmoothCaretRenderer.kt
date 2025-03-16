@@ -30,7 +30,7 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
             targetX = currentX
             targetY = currentY
 
-            timer = Timer(16) { // ~60 FPS
+            timer = Timer(16) { //
                 if (!editor.isDisposed) {
                     val dx = targetX - currentX
                     val dy = targetY - currentY
@@ -47,10 +47,7 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
         targetX = point.x.toDouble()
         targetY = point.y.toDouble()
 
-        val caretColor = editor.colorsScheme.getColor(EditorColors.CARET_COLOR)
-            ?: editor.colorsScheme.defaultForeground
-
-        g2d.color = caretColor
+        g2d.color = editor.colorsScheme.defaultForeground
 
         val metrics = editor.contentComponent.getFontMetrics(editor.colorsScheme.getFont(null))
         val height = metrics.height
