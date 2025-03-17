@@ -10,7 +10,17 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="dev.gorokhov.smoothcaret.SmoothCaretService"/>
-        <editorFactoryListener implementation="dev.gorokhov.smoothcaret.SmoothCaretEditorFactoryListener"/>
+        <applicationService serviceImplementation="dev.gorokhov.smoothcaret.SmoothCaretService"
+                            order="first, before *"/>
+        <editorFactoryListener implementation="dev.gorokhov.smoothcaret.SmoothCaretEditorFactoryListener"
+                               order="first, before *"/>
+        <com.intellij.applicationInitializedListener
+                implementation="dev.gorokhov.smoothcaret.SmoothCaretInitializedListener"
+                order="first"/>
     </extensions>
+
+    <applicationListeners>
+        <listener class="dev.gorokhov.smoothcaret.SmoothCaretEditorFactoryListener"
+                  topic="com.intellij.openapi.editor.event.EditorFactoryListener"/>
+    </applicationListeners>
 </idea-plugin>

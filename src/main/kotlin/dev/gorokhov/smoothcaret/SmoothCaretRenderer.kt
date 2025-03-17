@@ -1,7 +1,6 @@
 package dev.gorokhov.smoothcaret
 
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.markup.CustomHighlighterRenderer
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import java.awt.Graphics
@@ -31,11 +30,6 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
 
         val point = editor.caretModel.visualPosition.let { editor.visualPositionToXY(it) }
 
-        // Reset position if there's a large jump
-        if (Math.abs(point.x - targetX) > 1000 || Math.abs(point.y - targetY) > 1000) {
-            resetPosition(editor)
-        }
-
         ensureTimerStarted(editor)
 
         targetX = point.x.toDouble()
@@ -43,8 +37,7 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
 
         g2d.color = editor.colorsScheme.defaultForeground
 
-        val metrics = editor.contentComponent.getFontMetrics(editor.colorsScheme.getFont(null))
-        val height = metrics.height
+        val lineHeight = editor.lineHeight
 
         // Only draw if we have valid positions
         if (currentX.isFinite() && currentY.isFinite()) {
@@ -54,21 +47,23 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
                         currentX.toInt(),
                         currentY.toInt(),
                         settings.caretWidth,
-                        height
+                        lineHeight
                     )
                 }
+
                 SmoothCaretSettings.CaretStyle.LINE -> {
                     g2d.fillRect(
                         currentX.toInt(),
                         currentY.toInt(),
                         settings.caretWidth,
-                        height
+                        lineHeight
                     )
                 }
+
                 SmoothCaretSettings.CaretStyle.UNDERSCORE -> {
                     g2d.fillRect(
                         currentX.toInt(),
-                        currentY.toInt() + height - 2,
+                        currentY.toInt() + lineHeight - 2,
                         settings.caretWidth * 2,
                         2
                     )

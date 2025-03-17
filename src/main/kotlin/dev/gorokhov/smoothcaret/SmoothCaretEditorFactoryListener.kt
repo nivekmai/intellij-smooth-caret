@@ -34,9 +34,10 @@ class SmoothCaretEditorFactoryListener : EditorFactoryListener {
         editor.colorsScheme.setColor(EditorColors.CARET_COLOR, Color(0, 0, 0, 0))
 
         val markupModel = editor.markupModel
+        val docLength = editor.document.textLength
         val highlighter = markupModel.addRangeHighlighter(
             0,
-            0,
+            docLength,
             HighlighterLayer.LAST + 1,
             null,
             HighlighterTargetArea.EXACT_RANGE
@@ -53,6 +54,10 @@ class SmoothCaretEditorFactoryListener : EditorFactoryListener {
 
         editor.caretModel.addCaretListener(caretListener)
         editor.putUserData(CARET_LISTENER_KEY, caretListener)
+
+        editor.scrollingModel.addVisibleAreaListener { e ->
+            editor.contentComponent.repaint()
+        }
     }
 
     override fun editorReleased(event: EditorFactoryEvent) {
