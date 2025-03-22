@@ -151,20 +151,34 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
             val refreshRate = getScreenRefreshRate()
             val delay = 1000 / refreshRate
 
-            // Adjust the animation coefficient according to the refresh rate to make the animation feel consistent on high and low refresh screens
-            val baseSpeed = 0.3 // Base speed coefficient
-            val speedFactor = 60.0 / refreshRate // Adjustment factor relative to 60Hz
-            val adjustedSpeed = baseSpeed * speedFactor.coerceIn(0.5, 1.5) // Limit adjustment range
-
             timer = Timer(delay) {
                 if (!editor.isDisposed) {
                     val dx = targetX - currentX
                     val dy = targetY - currentY
-                    if (abs(dx) > 0.01 || abs(dy) > 0.01) {
-                        currentX += dx * adjustedSpeed
-                        currentY += dy * adjustedSpeed
-                        editor.contentComponent.repaint()
+
+                    if (settings.adaptiveSpeed) {
+                        val charWidth =
+                            editor.component.getFontMetrics(editor.colorsScheme.getFont(null)).charWidth('m')
+
+                        // Adaptive speed based on distance to avoid falling behind
+                        val speedFactor = when {
+                            abs(dx) > charWidth * 2 -> settings.maxCatchupSpeed
+                            abs(dx) > charWidth -> settings.catchupSpeed
+                            else -> settings.smoothness
+                        }
+
+                        if (abs(dx) > 0.01 || abs(dy) > 0.01) {
+                            currentX += dx * speedFactor
+                            currentY += dy * speedFactor
+                            editor.contentComponent.repaint()
+                        }
+                    } else {
+                        // Simple constant speed animation
+                        currentX += dx * settings.smoothness
+                        currentY += dy * settings.smoothness
                     }
+
+                    editor.contentComponent.repaint()
                 } else {
                     timer?.stop()
                     timer = null
