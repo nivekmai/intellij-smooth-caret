@@ -2,6 +2,7 @@ package dev.gorokhov.smoothcaret
 
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.EditorKind
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.event.*
 import com.intellij.openapi.editor.markup.HighlighterLayer
@@ -20,6 +21,8 @@ class SmoothCaretEditorFactoryListener : EditorFactoryListener {
     private fun setupSmoothCaret(editor: Editor) {
         if (!settings.isEnabled) return
 
+        if (shouldSkipEditor(editor)) return
+
         editor.settings.apply {
             isBlinkCaret = false
             isBlockCursor = false
@@ -35,11 +38,7 @@ class SmoothCaretEditorFactoryListener : EditorFactoryListener {
         val markupModel = editor.markupModel
         val docLength = editor.document.textLength
         val highlighter = markupModel.addRangeHighlighter(
-            0,
-            docLength,
-            HighlighterLayer.LAST + 1,
-            null,
-            HighlighterTargetArea.EXACT_RANGE
+            0, docLength, HighlighterLayer.LAST + 1, null, HighlighterTargetArea.EXACT_RANGE
         )
         highlighters[editor] = highlighter
 
@@ -48,32 +47,36 @@ class SmoothCaretEditorFactoryListener : EditorFactoryListener {
 
         val caretListener = object : CaretListener {
             override fun caretPositionChanged(event: CaretEvent) {
-                editor.contentComponent.repaint()
+                if (settings.isEnabled && editor.contentComponent.isShowing) {
+                    editor.contentComponent.repaint()
+                }
             }
         }
 
         val documentListener = object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 val newLength = editor.document.textLength
-                val markupModel = editor.markupModel
+                val currentHighlighter = highlighters[editor]
 
-                highlighters[editor]?.let { oldHighlighter ->
-                    markupModel.removeHighlighter(oldHighlighter)
+                if (currentHighlighter != null && newLength > 0) {
+                    val startOffset = currentHighlighter.startOffset
+                    val endOffset = currentHighlighter.endOffset
+
+                    if (startOffset == 0 && endOffset != newLength) {
+                        try {
+                            currentHighlighter.gutterIconRenderer = null
+                            val editorMarkupModel = editor.markupModel
+                            editorMarkupModel.removeHighlighter(currentHighlighter)
+
+                            val newHighlighter = editorMarkupModel.addRangeHighlighter(
+                                0, newLength, HighlighterLayer.LAST + 1, null, HighlighterTargetArea.EXACT_RANGE
+                            )
+                            newHighlighter.customRenderer = currentHighlighter.customRenderer
+                            highlighters[editor] = newHighlighter
+                        } catch (e: Exception) {
+                        }
+                    }
                 }
-
-                val newHighlighter = markupModel.addRangeHighlighter(
-                    0,
-                    newLength,
-                    HighlighterLayer.LAST + 1,
-                    null,
-                    HighlighterTargetArea.EXACT_RANGE
-                )
-
-                newHighlighter.customRenderer = highlighters[editor]?.customRenderer
-
-                highlighters[editor] = newHighlighter
-
-                editor.contentComponent.repaint()
             }
         }
 
@@ -83,32 +86,29 @@ class SmoothCaretEditorFactoryListener : EditorFactoryListener {
         editor.putUserData(DOCUMENT_LISTENER_KEY, documentListener)
     }
 
+    private fun shouldSkipEditor(editor: Editor): Boolean {
+        return editor.editorKind != EditorKind.MAIN_EDITOR;
+    }
+
     override fun editorReleased(event: EditorFactoryEvent) {
         val editor = event.editor
 
-        // Restore default caret color when editor is released
         event.editor.colorsScheme.setColor(EditorColors.CARET_COLOR, null)
 
-        // Remove document listener
         editor.getUserData(DOCUMENT_LISTENER_KEY)?.let { listener ->
             editor.document.removeDocumentListener(listener)
         }
 
-        // Remove caret listener
         editor.getUserData(CARET_LISTENER_KEY)?.let { listener ->
             editor.caretModel.removeCaretListener(listener)
         }
 
-        // Remove highlighter
         highlighters.remove(editor)?.let { highlighter ->
             editor.markupModel.removeHighlighter(highlighter)
         }
 
-        // Restore default caret color
         editor.colorsScheme.setColor(EditorColors.CARET_COLOR, null)
-
     }
-
 }
 
 private val CARET_LISTENER_KEY = com.intellij.openapi.util.Key<CaretListener>("SMOOTH_CARET_LISTENER")

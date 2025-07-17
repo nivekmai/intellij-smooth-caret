@@ -6,12 +6,13 @@ import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.XmlSerializerUtil
 
 @State(
-    name = "SmoothCaretSettings",
-    storages = [Storage("smooth-caret.xml")]
+    name = "SmoothCaretSettings", storages = [Storage("smooth-caret.xml")]
 )
 class SmoothCaretSettings : PersistentStateComponent<SmoothCaretSettings> {
 
     enum class CaretStyle { BLOCK, LINE, UNDERSCORE }
+
+    enum class BlinkingStyle { BLINK, SMOOTH, PHASE, EXPAND, SOLID }
 
     var isEnabled: Boolean = true
     var replaceDefaultCaret: Boolean = true
@@ -19,8 +20,8 @@ class SmoothCaretSettings : PersistentStateComponent<SmoothCaretSettings> {
     var caretStyle: CaretStyle = CaretStyle.LINE
     var caretColor: String = "CARET_COLOR"
 
-    var isBlinking: Boolean = true
-    var blinkInterval: Int = 500
+    var blinkInterval: Int = 850
+    var blinkingStyle: BlinkingStyle = BlinkingStyle.BLINK
 
     var caretHeightMargins: Int = 2
 
@@ -32,8 +33,8 @@ class SmoothCaretSettings : PersistentStateComponent<SmoothCaretSettings> {
 
     fun resetToDefaults() {
         isEnabled = true
-        isBlinking = true
-        blinkInterval = 500
+        blinkInterval = 850
+        blinkingStyle = BlinkingStyle.BLINK
         caretStyle = CaretStyle.LINE
         caretWidth = 2
         caretHeightMargins = 2
