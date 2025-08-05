@@ -1,9 +1,11 @@
 package dev.gorokhov.smoothcaret
 
 import com.intellij.openapi.editor.Caret
+import com.intellij.openapi.editor.CaretVisualAttributes
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.markup.CustomHighlighterRenderer
 import com.intellij.openapi.editor.markup.RangeHighlighter
+import com.intellij.openapi.util.TextRange
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
@@ -11,6 +13,8 @@ import java.awt.RenderingHints
 import java.awt.geom.Point2D
 import javax.swing.Timer
 import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.max
 import kotlin.math.round
 import kotlin.math.sin
 
@@ -28,6 +32,9 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
     private var cachedCharWidth: Int = 0
     private var cachedEditor: Editor? = null
     private val staticBlinkValue = BlinkValue(1.0f, 1.0f)
+
+    private var nextChar: Char? = null
+    private var nextCharWidth: Int = 0
 
     private data class CaretPosition(
         var currentX: Double = 0.0, var currentY: Double = 0.0, var targetX: Double = 0.0, var targetY: Double = 0.0
@@ -131,16 +138,18 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
                     settings.caretHeightMargins
                 }
 
-                when (settings.caretStyle) {
-                    SmoothCaretSettings.CaretStyle.BLOCK -> {
+                when (caret.visualAttributes.shape) {
+                    CaretVisualAttributes.Shape.BAR,
+                    CaretVisualAttributes.Shape.DEFAULT -> {
                         g2d.fillRect(caretX, caretY + yOffset, settings.caretWidth, scaledHeight)
                     }
-
-                    SmoothCaretSettings.CaretStyle.LINE -> {
-                        g2d.fillRect(caretX, caretY + yOffset, settings.caretWidth, scaledHeight)
+                    CaretVisualAttributes.Shape.BOX,
+                    CaretVisualAttributes.Shape.BLOCK -> {
+                        val nextChar = getNextCharFromCursorOrDefault(editor, caret, 'm')
+                        updateNextCharWidth(nextChar, editor)
+                        g2d.fillRect(caretX, caretY + yOffset, nextCharWidth,scaledHeight)
                     }
-
-                    SmoothCaretSettings.CaretStyle.UNDERSCORE -> {
+                    CaretVisualAttributes.Shape.UNDERSCORE -> {
                         val underscoreY = if (blinkValue.scaleY < 1.0f) {
                             caretY + caretHeight - 2 + (2 - (2 * blinkValue.scaleY).toInt()) / 2
                         } else {
@@ -161,6 +170,32 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
 
         // Clean up positions for carets that no longer exist
         caretPositions.keys.retainAll { caret -> allCarets.contains(caret) }
+    }
+
+    /** Update the cached value of [nextCharWidth] if [nextChar] has changed since the last computation */
+    private fun updateNextCharWidth(nextChar: Char, editor: Editor) {
+        if (nextChar != this.nextChar) {
+            val nextCharWidth = editor.component.getFontMetrics(editor.colorsScheme.getFont(null))
+                .charWidth(nextChar)
+            this.nextCharWidth = nextCharWidth
+            this.nextChar = nextChar
+        }
+    }
+
+    /** Get the next char after the current cursor or fall back to [default] in case there is no next char */
+    private fun getNextCharFromCursorOrDefault(
+        editor: Editor,
+        caret: Caret,
+        default: Char
+    ): Char {
+        val logicalPositionToOffset = editor.logicalPositionToOffset(caret.logicalPosition)
+        val endOffset = min(logicalPositionToOffset + 1, editor.document.textLength)
+        val startOffset = max(endOffset - 1, 0)
+        return if (TextRange.isProperRange(startOffset, endOffset)) {
+            editor.document.getText(TextRange(startOffset, endOffset))[0]
+        } else {
+            default
+        }
     }
 
     private fun calculateBlinkValue(timeInCycle: Float): BlinkValue {
