@@ -8,8 +8,10 @@ import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
+import java.awt.geom.Point2D
 import javax.swing.Timer
 import kotlin.math.abs
+import kotlin.math.round
 import kotlin.math.sin
 
 class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHighlighterRenderer {
@@ -57,13 +59,13 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
         var anyMoving = false
 
         allCarets.forEach { caret ->
-            val point = editor.visualPositionToXY(caret.visualPosition)
+            val point = editor.visualPositionToPoint2D(caret.visualPosition)
             val caretPos = caretPositions.getOrPut(caret) {
                 CaretPosition(
-                    currentX = point.x.toDouble(),
-                    currentY = point.y.toDouble(),
-                    targetX = point.x.toDouble(),
-                    targetY = point.y.toDouble()
+                    currentX = point.x,
+                    currentY = point.y,
+                    targetX = point.x,
+                    targetY = point.y
                 )
             }
 
@@ -71,8 +73,8 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
                 resetCaretPosition(caretPos, point)
             }
 
-            caretPos.targetX = point.x.toDouble()
-            caretPos.targetY = point.y.toDouble()
+            caretPos.targetX = point.x
+            caretPos.targetY = point.y
 
             val isMoving =
                 abs(caretPos.targetX - caretPos.currentX) > 0.01 || abs(caretPos.targetY - caretPos.currentY) > 0.01
@@ -120,8 +122,8 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
             val caretPos = caretPositions[caret] ?: return@forEach
 
             if (caretPos.currentX.isFinite() && caretPos.currentY.isFinite()) {
-                val caretX = caretPos.currentX.toInt()
-                val caretY = caretPos.currentY.toInt()
+                val caretX = round(caretPos.currentX).toInt()
+                val caretY = round(caretPos.currentY).toInt()
                 val scaledHeight = (caretHeight * blinkValue.scaleY).toInt()
                 val yOffset = if (blinkValue.scaleY < 1.0f) {
                     settings.caretHeightMargins + (caretHeight - scaledHeight) / 2
@@ -244,21 +246,21 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
         caretPositions.clear()
         val allCarets = editor.caretModel.allCarets
         allCarets.forEach { caret ->
-            val point = editor.visualPositionToXY(caret.visualPosition)
+            val point = editor.visualPositionToPoint2D(caret.visualPosition)
             val caretPos = CaretPosition(
-                currentX = point.x.toDouble(),
-                currentY = point.y.toDouble(),
-                targetX = point.x.toDouble(),
-                targetY = point.y.toDouble()
+                currentX = point.x,
+                currentY = point.y,
+                targetX = point.x,
+                targetY = point.y
             )
             caretPositions[caret] = caretPos
         }
         blinkStartTime = System.currentTimeMillis()
     }
 
-    private fun resetCaretPosition(caretPos: CaretPosition, point: java.awt.Point) {
-        caretPos.currentX = point.x.toDouble()
-        caretPos.currentY = point.y.toDouble()
+    private fun resetCaretPosition(caretPos: CaretPosition, point: Point2D) {
+        caretPos.currentX = point.x
+        caretPos.currentY = point.y
         caretPos.targetX = caretPos.currentX
         caretPos.targetY = caretPos.currentY
     }
@@ -305,7 +307,7 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
                         val dx = caretPos.targetX - caretPos.currentX
                         val dy = caretPos.targetY - caretPos.currentY
 
-                        if (abs(dx) > 0.01 || abs(dy) > 0.01) {
+                        if (abs(dx) > 0 || abs(dy) > 0.01) {
                             val speedFactor = if (settings.adaptiveSpeed) {
                                 when {
                                     abs(dx) > cachedCharWidth * 2 -> settings.maxCatchupSpeed
