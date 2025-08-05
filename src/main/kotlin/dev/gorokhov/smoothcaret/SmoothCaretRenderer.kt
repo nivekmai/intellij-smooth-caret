@@ -33,8 +33,8 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
     private var cachedEditor: Editor? = null
     private val staticBlinkValue = BlinkValue(1.0f, 1.0f)
 
-    private var nextChar: Char? = null
-    private var nextCharWidth: Int = 0
+    private var cachedNextChar: Char? = null
+    private var cachedNextCharWidth: Int = 0
 
     private data class CaretPosition(
         var currentX: Double = 0.0, var currentY: Double = 0.0, var targetX: Double = 0.0, var targetY: Double = 0.0
@@ -145,9 +145,8 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
                     }
                     CaretVisualAttributes.Shape.BOX,
                     CaretVisualAttributes.Shape.BLOCK -> {
-                        val nextChar = getNextCharFromCursorOrDefault(editor, caret, 'm')
-                        updateNextCharWidth(nextChar, editor)
-                        g2d.fillRect(caretX, caretY + yOffset, nextCharWidth,scaledHeight)
+                        val nextCharWidth = updateNextCharWidth(caret)
+                        g2d.fillRect(caretX, caretY + yOffset, nextCharWidth, scaledHeight)
                     }
                     CaretVisualAttributes.Shape.UNDERSCORE -> {
                         val underscoreY = if (blinkValue.scaleY < 1.0f) {
@@ -155,10 +154,11 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
                         } else {
                             caretY + caretHeight - 2
                         }
+                        val nextCharWidth = updateNextCharWidth(caret)
                         g2d.fillRect(
                             caretX,
                             underscoreY,
-                            settings.caretWidth * 2,
+                            nextCharWidth,
                             (2 * blinkValue.scaleY).toInt().coerceAtLeast(1)
                         )
                     }
@@ -172,14 +172,19 @@ class SmoothCaretRenderer(private val settings: SmoothCaretSettings) : CustomHig
         caretPositions.keys.retainAll { caret -> allCarets.contains(caret) }
     }
 
-    /** Update the cached value of [nextCharWidth] if [nextChar] has changed since the last computation */
-    private fun updateNextCharWidth(nextChar: Char, editor: Editor) {
-        if (nextChar != this.nextChar) {
-            val nextCharWidth = editor.component.getFontMetrics(editor.colorsScheme.getFont(null))
+    /** Update the cached value of [cachedNextCharWidth] if [cachedNextChar] has changed since the last computation */
+    private fun updateNextCharWidth(caret: Caret) : Int {
+        val editor = caret.editor
+        val nextChar = getNextCharFromCursorOrDefault(editor, caret, 'm')
+        if (nextChar != cachedNextChar) {
+            val nextCharWidth = editor
+                .component
+                .getFontMetrics(editor.colorsScheme.getFont(null))
                 .charWidth(nextChar)
-            this.nextCharWidth = nextCharWidth
-            this.nextChar = nextChar
+            cachedNextCharWidth = nextCharWidth
+            cachedNextChar = nextChar
         }
+        return cachedNextCharWidth
     }
 
     /** Get the next char after the current cursor or fall back to [default] in case there is no next char */
